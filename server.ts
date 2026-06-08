@@ -38,6 +38,19 @@ function getGeminiClient() {
 
 async function startServer() {
   const app = express();
+
+  // Allow requests from any origin (to support Electron file:// protocols and local/deployed container frames)
+  app.use((req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
+    res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With, content-type, Authorization');
+    if (req.method === 'OPTIONS') {
+      res.sendStatus(200);
+    } else {
+      next();
+    }
+  });
+
   app.use(express.json());
 
   // API Route: Generate Skill Mindmap
@@ -108,20 +121,13 @@ Kembalikan JSON murni saja. Jangan tambahkan penjelasan lain di luar string JSON
       }
 
       try {
-        const data = JSON.parse(responseText.trim());
+        const cleaned = cleanJsonString(responseText);
+        const data = JSON.parse(cleaned);
         return res.json({ ...data, isFallback: false });
       } catch (e) {
-        console.warn('Gagal melakukan parsing JSON dari Gemini, mencoba membersihkan string:', e);
-        // Clean markdown backticks if any
-        let cleanText = responseText;
-        if (cleanText.includes('```')) {
-          cleanText = cleanText.split('```')[1];
-          if (cleanText.startsWith('json')) {
-            cleanText = cleanText.substring(4);
-          }
-        }
-        const data = JSON.parse(cleanText.trim());
-        return res.json({ ...data, isFallback: false });
+        console.warn('Gagal melakukan parsing JSON dari Gemini:', e);
+        // Fallback to getDemoMindmap if clean parser completely fails
+        throw e;
       }
     } catch (err: any) {
       console.log('Mindmap fallback applied:', err?.message || err);
@@ -222,22 +228,16 @@ Kembalikan JSON murni tanpa menyertakan tanda kutip markdown (\`\`\`json).`;
         throw new Error('Gemini API quota depleted or connection refused on all modes.');
       }
 
-      let finalData: any = null;
-
-      try {
-        const data = JSON.parse(responseText.trim());
-        finalData = { ...data, sources };
-      } catch (e) {
-        let cleanText = responseText;
-        if (cleanText.includes('```')) {
-          cleanText = cleanText.split('```')[1];
-          if (cleanText.startsWith('json')) {
-            cleanText = cleanText.substring(4);
-          }
-        }
-        const data = JSON.parse(cleanText.trim());
-        finalData = { ...data, sources };
-      }
+       let finalData: any = null;
+ 
+       try {
+         const cleanText = cleanJsonString(responseText);
+         const parsed = JSON.parse(cleanText);
+         finalData = { ...parsed, sources };
+       } catch (parseErr) {
+         console.warn('Gagal melakukan parsing JSON dari Gemini tech-news, dialihkan:', parseErr);
+         throw parseErr;
+       }
 
       if (finalData && finalData.news && finalData.news.length > 0) {
         cachedTechNews = finalData;
@@ -258,10 +258,26 @@ Kembalikan JSON murni tanpa menyertakan tanda kutip markdown (\`\`\`json).`;
     }
   });
 
-  // Helper to clean JSON response from Gemini markdown codeblocks
+  // Helper to clean JSON response from Gemini markdown codeblocks and conversational text
   function cleanJsonString(raw: string): string {
     let cleanText = raw.trim();
-    if (cleanText.includes('```')) {
+    
+    // Attempt block level braces or brackets extraction first (most resilient to markdown text wrap issues)
+    const firstBrace = cleanText.indexOf('{');
+    const lastBrace = cleanText.lastIndexOf('}');
+    const firstBracket = cleanText.indexOf('[');
+    const lastBracket = cleanText.lastIndexOf(']');
+    
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+      // Check if bracket is outer of brace
+      if (firstBracket !== -1 && lastBracket !== -1 && firstBracket < firstBrace && lastBracket > lastBrace) {
+        cleanText = cleanText.substring(firstBracket, lastBracket + 1);
+      } else {
+        cleanText = cleanText.substring(firstBrace, lastBrace + 1);
+      }
+    } else if (firstBracket !== -1 && lastBracket !== -1 && lastBracket > firstBracket) {
+      cleanText = cleanText.substring(firstBracket, lastBracket + 1);
+    } else if (cleanText.includes('```')) {
       // Split on first ``` block
       const parts = cleanText.split('```');
       // Second part usually holds the code
@@ -273,6 +289,10 @@ Kembalikan JSON murni tanpa menyertakan tanda kutip markdown (\`\`\`json).`;
     }
     // Remove trailing/leading backticks if any
     cleanText = cleanText.replace(/^```|```$/g, '').trim();
+    
+    // Regex clean illegal trailing commas before closing braces/brackets
+    cleanText = cleanText.replace(/,(\s*[\]}])/g, '$1');
+    
     return cleanText;
   }
 

@@ -39,7 +39,9 @@ import {
   DownloadCloud,
   UploadCloud,
   ShieldCheck,
-  Code
+  Code,
+  Sliders,
+  Settings
 } from 'lucide-react';
 
 import { 
@@ -115,6 +117,143 @@ interface RewardItem {
   cost: number;
   icon: 'game' | 'social' | 'coffee' | 'food' | 'rest';
 }
+
+// Helper to resolve API URLs: if running inside packaged Electron (file:// protocol), we route to our secure cloud backend URL
+const getApiUrl = (endpointPath: string): string => {
+  if (window.location.protocol === 'file:') {
+    const cloudRunBase = "https://ais-pre-6djqtbwn62j2lbuit6j2sz-584710064668.asia-southeast1.run.app";
+    return `${cloudRunBase}${endpointPath}`;
+  }
+  return endpointPath;
+};
+
+// Client-side fallbacks for news, mindmaps, braindump converter, and journal summary in case of network issues or rate limitations.
+const FALLBACK_TECH_NEWS: TechNewsItem[] = [
+  {
+    id: "demo-1",
+    title: "Perkembangan Model AI Agentic yang Mandiri di Dunia Industri",
+    category: "Artificial Intelligence",
+    summary: "Sistem kecerdasan buatan kini bergeser dari sekadar menjawab teks menjadi AI Agent yang mampu mengeksekusi multi-langkah tugas rumit secara otonom di browser atau database.",
+    whyItMatters: "Memahami AI Agent membuka peluang karir sebagai AI Architect atau Developer yang mengotomatiskan workflow perusahaan.",
+    adhdFriendlyStep: "Coba pasang pustaka sederhana (seperti mendownload template open-source AI Agent) lalu amati cara ia membagi tugasnya."
+  },
+  {
+    id: "demo-2",
+    title: "Peningkatan Adopsi Framework Web Berkecepatan Tinggi (Next.js 16 & Vite 6)",
+    category: "Web Development",
+    summary: "Framework modern saat ini memprioritaskan efisiensi memory, loading instant, dan modularisasi optimal demi kepuasan pengguna global.",
+    whyItMatters: "Pengembangan front-end menuntut pembuatan visual interaktif tanpa lag yang sangat sejalan dengan ekspektasi produk berkualitas tinggi.",
+    adhdFriendlyStep: "Buat halaman web kosong super cepat dengan Vite hanya dalam waktu 3 menit, rasakan dopamin instan saat melihatnya online!"
+  },
+  {
+    id: "demo-3",
+    title: "Popularitas Teknologi Cloud-Native Tanpa Server (Serverless Containers)",
+    category: "Cloud Computing",
+    summary: "Aplikasi sekarang dideploy secara global ke serverless container yang mati otomatis saat tidak digunakan untuk menghemat biaya.",
+    whyItMatters: "Developer tidak perlu lagi mengatur server Linux secara manual, cukup fokus menulis logika kode.",
+    adhdFriendlyStep: "Lihat video singkat berdurasi 5 menit yang menggambarkan konsep 'Server di Awan' secara visual interaktif."
+  },
+  {
+    id: "demo-4",
+    title: "Kebangkitan Desain Interface Spasial (UI/UX Imersif & AR/VR)",
+    category: "Design & UX",
+    summary: "Desain UI mulai beralih dari layar dua dimensi ke dunia nyata menggunakan Augmented Reality yang memadukan visual alami dengan data fisik.",
+    whyItMatters: "Mempelajari interaksi spasial membuka karir di bidang visualisasi masa depan di dunia medis dan game.",
+    adhdFriendlyStep: "Coba instal simulator interaksi 3D gratis di ponsel Anda dan geser benda-benda virtual di ruangan Anda."
+  }
+];
+
+const FALLBACK_GENERAL_SARAN = "Trik Belajar untuk ADHD: Gunakan teknik 'Micro-Learning'—cukup pilih satu konsep menarik di atas, pasang timer selama 10 menit, dan matikan semua tab lainnya. Setelah selesai, coret tugas itu dan klaim poin reward Anda harian!";
+
+const generateFallbackMindmap = (skill: string, level: string): { title: string; nodes: MindmapNode[] } => ({
+  title: `Peta Pembelajaran ${skill} (${level}) [Offline Mode]`,
+  nodes: [
+    {
+      id: 'node-1',
+      label: `Pengenalan Dasar ${skill}`,
+      description: `Memahami konsep inti dari ${skill} tanpa kecemasan. Mulailah dari gambaran besarnya dahulu.`,
+      parentId: null,
+      xpReward: 100,
+      suggestedResources: [
+        "Membaca glosarium atau istilah populer selama 5 menit.",
+        "Menonton video animasi pengantar di YouTube (durasi di bawah 10 menit)."
+      ]
+    },
+    {
+      id: 'node-2',
+      label: 'Alat dan Lingkungan Kerja',
+      description: 'Menyiapkan alat pendukung utama. Struktur visual yang rapi memudahkan fokus.',
+      parentId: 'node-1',
+      xpReward: 120,
+      suggestedResources: [
+        "Unduh editor kode (VS Code) atau alat khusus terpilih.",
+        "Buat checklist instalasi sederhana dan coret jika selesai."
+      ]
+    },
+    {
+      id: 'node-3',
+      label: 'Proyek Latihan Pertama (Mini)',
+      description: 'Membuat produk nyata berukuran mikro dalam waktu kurang dari 15 menit agar segera mendapatkan dopamin!',
+      parentId: 'node-2',
+      xpReward: 180,
+      suggestedResources: [
+        "Ubah teks warna/tema atau buat fungsi log sederhana.",
+        "Rayakan penyelesaian langkah pertama Anda!"
+      ]
+    },
+    {
+      id: 'node-4',
+      label: 'Konsep Logika Sederhana',
+      description: 'Memahami bagaimana data dialirkan secara runut sekilas.',
+      parentId: 'node-1',
+      xpReward: 150,
+      suggestedResources: [
+        "Lakukan latihan teka-teki logika pendek.",
+        "Gambarkan diagram alir sederhana di kertas coret-coret."
+      ]
+    },
+    {
+      id: 'node-5',
+      label: 'Menghubungkan Bagian-Bagian Kecil',
+      description: 'Menggabungkan potongan pengetahuan pertama Anda ke dalam proyek yang bermakna.',
+      parentId: 'node-3',
+      xpReward: 200,
+      suggestedResources: [
+        "Gabungkan proyek latihan mini Anda dengan fitur baru.",
+        "Ceritakan kemajuan ini kepada teman belajar atau di jurnal harian."
+      ]
+    },
+    {
+      id: 'node-6',
+      label: 'Evaluasi & Peningkatan Level',
+      description: 'Meninjau kemajuan Anda, meremajakan fokus, dan membuka materi tingkat berikutnya.',
+      parentId: 'node-5',
+      xpReward: 250,
+      suggestedResources: [
+        "Catat apa yang berhasil berjalan baik hari ini.",
+        "Ambil waktu istirahat yang bermakna sebelum melompat ke materi selanjutnya."
+      ]
+    }
+  ]
+});
+
+const FALLBACK_BRAINDUMP_TASKS = [
+  { title: "Rapikan tab browser yang tidak dipakai", complexity: "Mudah", xp: 40, reason: "Menghapus noise visual yang membuat pikiran cemas harian." },
+  { title: "Tulis 3 poin ide terpenting ke jurnal", complexity: "Sedang", xp: 75, reason: "Menyelamatkan ide brilian dari kelupaan jangka panjang." },
+  { title: "Pilih 1 tugas mini untuk dikerjakan besok", complexity: "Sedang", xp: 75, reason: "Memberikan kejelasan tugas berikutnya saat baru bangun tidur." },
+  { title: "Sesi rehat otot 10 menit ditenangkan musik", complexity: "Mudah", xp: 40, reason: "Menyegarkan kembali simpanan dopamin yang lelah harian." }
+];
+
+const FALLBACK_JOURNAL_SUMMARY = {
+  achievements: [
+    "Menangkap aliran pikiran orisinal ke dalam Notepad harian.",
+    "Berhasil mendaftar target jangka pendek agar tidak melompat fokus.",
+    "Menggunakan visualizer ADHD untuk memecah kecemasan harian."
+  ],
+  burnoutLevel: "Rendah. Pola harian Anda dinilai cukup adaptif dan aman hari ini.",
+  adhdSaran: "Saran ADHD: Biasakan tidur dengan durasi yang konsisten. Otak ADHD sangat peka terhadap defisit istirahat malam. Tetapkan batas tegas bermain gawai.",
+  bulletSummary: "Anda menunjukkan minat belajar yang besar hari ini. Menyalakan tracking, menuliskan kesimpulan di notepad harian, dan mendaftar target adalah pencapaian istimewa yang patut dihargai tinggi. Teruslah tumbuh perlahan!"
+};
 
 const DEFAULT_TASKS: Task[] = [
   {
@@ -374,6 +513,68 @@ export default function App() {
   // Motivational quote cycle
   const [quoteIndex, setQuoteIndex] = useState(0);
 
+  // Daily Streak automatic check and reset upon launch
+  useEffect(() => {
+    const lastActiveDateStr = localStorage.getItem('adhd_last_active_date');
+    const todayStr = new Date().toISOString().split('T')[0];
+    
+    if (!lastActiveDateStr) {
+      localStorage.setItem('adhd_last_active_date', todayStr);
+    } else {
+      try {
+        const lastDateObj = new Date(lastActiveDateStr + 'T12:00:00');
+        const todayObj = new Date(todayStr + 'T12:00:00');
+        
+        const diffTime = todayObj.getTime() - lastDateObj.getTime();
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        
+        if (diffDays > 1) {
+          // A calendar day was missed entirely with zero activity
+          setStreak(0);
+          // Wait briefly to make sure UI is fully loaded before showing the banner
+          setTimeout(() => {
+            triggerBanner(`💔 Streak Lu balik ke 0 karena tidak ada aktivitas harian kemarin! Semangat lagi hari ini untuk memulainya kembali!`);
+          }, 3000);
+        }
+      } catch (e) {
+        console.error("Streak calculation failed: ", e);
+      }
+    }
+  }, []);
+
+  // Register today's activity, maintaining and incrementing the active ADHD streak
+  const registerActivity = () => {
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    const lastActiveDateStr = localStorage.getItem('adhd_last_active_date');
+
+    if (!lastActiveDateStr) {
+      localStorage.setItem('adhd_last_active_date', todayStr);
+    } else if (lastActiveDateStr !== todayStr) {
+      // It's a brand new active day!
+      const lastDateObj = new Date(lastActiveDateStr + 'T12:00:00');
+      const todayObj = new Date(todayStr + 'T12:00:00');
+      const diffTime = todayObj.getTime() - lastDateObj.getTime();
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+      if (diffDays === 1) {
+        // Active on sequential days, increment streak!
+        setStreak(prev => {
+          const nextStreak = prev + 1;
+          triggerBanner(`🔥 Keren banget! Streak lu bertambah menjadi ${nextStreak} Hari Beruntun!`);
+          return nextStreak;
+        });
+      } else if (diffDays > 1) {
+        // Skipped some days, start again at 1
+        setStreak(1);
+        triggerBanner(`🔥 Selamat memulai kembali! Streak baru Anda berjalan: 1 Hari.`);
+      }
+      localStorage.setItem('adhd_last_active_date', todayStr);
+    } else {
+      localStorage.setItem('adhd_last_active_date', todayStr);
+    }
+  };
+
   // Trigger persistent save
   useEffect(() => {
     localStorage.setItem('adhd_uname', uName);
@@ -590,6 +791,7 @@ export default function App() {
     setXp(prev => prev + xpGain);
     setCoins(prev => prev + coinsGain);
     setTotalFocusMinutes(prev => prev + timerPreset);
+    registerActivity();
     triggerBanner(`🎯 SELESAI FOKUS! Anda menyelesaikan sesi ${timerPreset} menit! Mendapatkan +${xpGain} XP dan +${coinsGain} Koin.`);
     setTimerMinutes(timerPreset);
     setTimerSeconds(0);
@@ -710,6 +912,7 @@ export default function App() {
           playSound('success');
           setXp(p => p + t.xpReward);
           setCoins(c => c + t.coinReward);
+          registerActivity();
           triggerBanner(`🎉 TUGAS SELESAI Dopamine Boost! Anda mendapat +${t.xpReward} XP dan +${t.coinReward} Koin.`);
         } else {
           // Unchecked: subtract points
@@ -745,7 +948,7 @@ export default function App() {
     setIsGeneratingMM(true);
 
     try {
-      const response = await fetch('/api/gemini/generate-mindmap', {
+      const response = await fetch(getApiUrl('/api/gemini/generate-mindmap'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ skillName: aiSkillInput.trim(), level: aiLevelInput })
@@ -767,7 +970,15 @@ export default function App() {
       }
     } catch (err: any) {
       console.error(err);
-      triggerBanner('🛑 Gagal menghasilkan mind map lewat AI. Mode Fallback diaktifkan.');
+      // Load fallback local mindmap
+      const fbMap = generateFallbackMindmap(aiSkillInput.trim() || 'Peta Pikiran', aiLevelInput);
+      setActiveMindmap({
+        title: fbMap.title,
+        nodes: fbMap.nodes,
+        completedNodes: []
+      });
+      setSelectedNodeId(fbMap.nodes[0]?.id || null);
+      triggerBanner('🛑 Gagal menghasilkan mind map lewat AI. Mode Offline diaktifkan.');
     } finally {
       setIsGeneratingMM(false);
     }
@@ -792,6 +1003,7 @@ export default function App() {
 
     setXp(prev => prev + node.xpReward);
     setCoins(prev => prev + Math.ceil(node.xpReward / 5)); // 20% coin conversion
+    registerActivity();
     triggerBanner(`🚀 LEVEL UP SKILL! Menguasai topik "${node.label}"! Mendapatkan +${node.xpReward} XP dan bonus koin.`);
   };
 
@@ -799,7 +1011,7 @@ export default function App() {
   const loadTechNews = async () => {
     setIsLoadingNews(true);
     try {
-      const res = await fetch('/api/gemini/tech-news', {
+      const res = await fetch(getApiUrl('/api/gemini/tech-news'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -809,11 +1021,15 @@ export default function App() {
       const suggestions = data.generalSaran || data.fallbackData?.generalSaran || '';
       const sourcesList = data.sources || [];
 
-      setTechNews(newsItems);
-      setGeneralSaran(suggestions);
+      setTechNews(newsItems.length > 0 ? newsItems : FALLBACK_TECH_NEWS);
+      setGeneralSaran(suggestions || FALLBACK_GENERAL_SARAN);
       setNewsSources(sourcesList);
     } catch (e) {
-      console.error("Gagal memuat berita teknologi baru:", e);
+      console.error("Gagal memuat berita teknologi baru, memuat data lokal:", e);
+      // Seamlessly fall back inside client
+      setTechNews(FALLBACK_TECH_NEWS);
+      setGeneralSaran(FALLBACK_GENERAL_SARAN);
+      setNewsSources([]);
     } finally {
       setIsLoadingNews(false);
     }
@@ -903,6 +1119,7 @@ export default function App() {
           playSound('success');
           setXp(p => p + 50); // reward target completion with 50 XP
           setCoins(c => c + 10);
+          registerActivity();
           triggerBanner(`🎉 Target Tercapai! +50 XP & +10 Koin Dopamin.`);
         } else {
           playSound('click');
@@ -928,7 +1145,7 @@ export default function App() {
     setIsConvertingDump(true);
 
     try {
-      const response = await fetch('/api/gemini/braindump-converter', {
+      const response = await fetch(getApiUrl('/api/gemini/braindump-converter'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: brainDumpInput.trim() })
@@ -958,7 +1175,20 @@ export default function App() {
       }
     } catch (err: any) {
       console.error(err);
-      triggerBanner('🛑 Gagal memproses limpahan pikiran. Silakan coba kembali.');
+      // Client-side fallbacks
+      const parsedTasks: Task[] = FALLBACK_BRAINDUMP_TASKS.map((t: any, idx: number) => ({
+        id: 'dump-task-offline-' + Date.now() + '-' + idx,
+        title: t.title,
+        urgency: t.complexity === 'Tinggi' ? 'High' : t.complexity === 'Sedang' ? 'Medium' : 'Low',
+        xpReward: t.xp || 75,
+        coinReward: Math.ceil((t.xp || 75) / 5),
+        isCompleted: false,
+        notes: t.reason || 'Hasil terjemahan curahan isi kepala'
+      }));
+      setTasks(prev => [...parsedTasks, ...prev]);
+      setBrainDumpInput('');
+      setIdeasCount(prev => prev + 1);
+      triggerBanner(`🧠 Konversi Berhasil (Offline)! ${parsedTasks.length} tugas mikro ditambahkan ke Dasbor.`);
     } finally {
       setIsConvertingDump(false);
     }
@@ -978,7 +1208,7 @@ export default function App() {
       // Prepare targets representation
       const activeTargetsStr = targets.map(t => `[${t.isCompleted ? 'Selesai' : 'Belum Selesai'}] (${t.category === 'ShortTerm' ? 'Harian' : 'Jangka Panjang'}) ${t.title}`).join('\n');
 
-      const response = await fetch('/api/gemini/summarize-journal', {
+      const response = await fetch(getApiUrl('/api/gemini/summarize-journal'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ notes: notepadContent.trim(), targets: activeTargetsStr })
@@ -996,7 +1226,10 @@ export default function App() {
       }
     } catch (e: any) {
       console.error(e);
-      triggerBanner('🛑 Terjadi kendala saat menyusun kesusasteraan harian lewat server.');
+      // Client-side fallback summary
+      setJournalSummary(FALLBACK_JOURNAL_SUMMARY);
+      playSound('levelUp');
+      triggerBanner('📔 Evaluasi harian disusun menggunakan saran kognitif terintegrasi.');
     } finally {
       setIsSummarizingJournal(false);
     }
@@ -2391,7 +2624,7 @@ export default function App() {
                               triggerBanner("❌ Gagal masuk dengan Google.");
                             }
                           }}
-                          className="w-full bg-slate-900 hover:bg-slate-850 text-white font-extrabold text-xs py-3.5 px-4 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2.5 border border-slate-800"
+                          className="w-full bg-slate-900 hover:bg-slate-850 text-white font-extrabold text-xs py-3.5 px-4 rounded-2xl transition-all shadow-md flex items-center justify-center gap-2.5 border border-slate-800 cursor-pointer"
                         >
                           <svg className="w-4 h-4 fill-white shrink-0" viewBox="0 0 24 24">
                             <path d="M12.24 10.285V13.4h6.887C18.2 15.614 15.645 18 12.24 18c-3.86 0-7-3.14-7-7s3.14-7 7-7c1.7 0 3.3.615 4.5 1.77l2.42-2.42C17.345 1.625 14.89 1 12.24 1 6.59 1 2 5.59 2 11.24s4.59 10.24 10.24 10.24c5.9 0 9.805-4.145 9.805-10 0-.615-.055-1.125-.175-1.615H12.24z"/>
@@ -2410,11 +2643,20 @@ export default function App() {
                               triggerBanner("❌ Gagal masuk secara anonim.");
                             }
                           }}
-                          className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold py-3 px-4 rounded-2xl transition-all flex items-center justify-center gap-2 border border-slate-200"
+                          className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold py-3 px-4 rounded-2xl transition-all flex items-center justify-center gap-2 border border-slate-200 cursor-pointer"
                         >
                           <User className="w-4 h-4" />
                           Masuk sebagai Guest (Anonim)
                         </button>
+                      </div>
+
+                      <div className="bg-blue-50/70 border border-blue-200 p-3.5 rounded-2xl text-[11px] text-blue-900 leading-normal flex flex-col gap-1 text-left">
+                        <span className="font-extrabold text-blue-950 flex items-center gap-1">
+                          💡 INFO RESTRIKSI IFRAME GOOGLE
+                        </span>
+                        <span>
+                          Jika dialog login Google tidak merespon (terbelenggu iframe AI Studio), harap klik tombol <strong>"Aplikasi di Tab Baru"</strong> di sudut kanan atas workspace, atau klik tombol <strong>"Guest Mode"</strong> di atas untuk login instan!
+                        </span>
                       </div>
 
                       <div className="text-[10px] text-slate-400 text-center">
@@ -2478,9 +2720,129 @@ export default function App() {
                   )}
                 </div>
 
+                {/* Visual Stats & Streak Modifier Panel */}
+                <div className="border-t border-slate-100 pt-5 mt-5">
+                  <div className="flex items-center gap-1.5 mb-3">
+                    <Sliders className="w-4 h-4 text-orange-600 animate-pulse" />
+                    <h4 className="text-xs font-extrabold text-slate-850 uppercase tracking-widest font-mono">Panel Modifikasi Parameter ADHD</h4>
+                  </div>
+                  
+                  <p className="text-[10px] text-slate-400 mb-3 text-left">
+                    Gunakan panel ini untuk memanipulasi atau mengatur ulang instan progresi harian Anda (Streak, XP, token Koin, Level, dll.) untuk simulasi ADHD:
+                  </p>
+
+                  <div className="grid grid-cols-2 gap-2 text-left">
+                    <div>
+                      <span className="block text-[9px] font-extrabold text-slate-500 font-mono mb-1">STREAK HARI (Hari)</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={streak}
+                        onChange={(e) => {
+                          const val = Math.max(0, parseInt(e.target.value) || 0);
+                          setStreak(val);
+                        }}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 font-bold font-mono focus:outline-none focus:border-orange-200"
+                      />
+                    </div>
+                    <div>
+                      <span className="block text-[9px] font-extrabold text-slate-500 font-mono mb-1">DOPAMINE COINS (Token)</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={coins}
+                        onChange={(e) => {
+                          const val = Math.max(0, parseInt(e.target.value) || 0);
+                          setCoins(val);
+                        }}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 font-bold font-mono focus:outline-none focus:border-orange-200"
+                      />
+                    </div>
+                    <div>
+                      <span className="block text-[9px] font-extrabold text-slate-500 font-mono mb-1 font-mono">TOTAL XP</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={xp}
+                        onChange={(e) => {
+                          const val = Math.max(0, parseInt(e.target.value) || 0);
+                          setXp(val);
+                        }}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 font-bold font-mono focus:outline-none focus:border-orange-200"
+                      />
+                    </div>
+                    <div>
+                      <span className="block text-[9px] font-extrabold text-slate-500 font-mono mb-1 font-mono">TOTAL LEVEL</span>
+                      <input
+                        type="number"
+                        min="1"
+                        value={level}
+                        onChange={(e) => {
+                          const val = Math.max(1, parseInt(e.target.value) || 1);
+                          setLevel(val);
+                        }}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-805 font-bold font-mono focus:outline-none focus:border-orange-200"
+                      />
+                    </div>
+                    <div>
+                      <span className="block text-[9px] font-extrabold text-slate-500 font-mono mb-1">SUPERPOWER IDEAS</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={ideasCount}
+                        onChange={(e) => {
+                          const val = Math.max(0, parseInt(e.target.value) || 0);
+                          setIdeasCount(val);
+                        }}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 font-bold font-mono focus:outline-none focus:border-orange-200"
+                      />
+                    </div>
+                    <div>
+                      <span className="block text-[9px] font-extrabold text-slate-500 font-mono mb-1">FOKUS (Menit)</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={totalFocusMinutes}
+                        onChange={(e) => {
+                          const val = Math.max(0, parseInt(e.target.value) || 0);
+                          setTotalFocusMinutes(val);
+                        }}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5 text-xs text-slate-800 font-bold font-mono focus:outline-none focus:border-orange-200"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2 mt-4 text-xs">
+                    <button
+                      onClick={() => {
+                        playSound('click');
+                        setStreak(0);
+                        setCoins(0);
+                        setXp(120);
+                        setLevel(1);
+                        setIdeasCount(0);
+                        setTotalFocusMinutes(0);
+                        triggerBanner("♻️ Semua parameter progresi harian dan token koin di-reset menjadi default/0!");
+                      }}
+                      className="flex-1 bg-rose-50 hover:bg-rose-100 text-rose-700 hover:text-rose-800 font-extrabold text-[10px] py-2 px-3 rounded-xl border border-rose-100 transition-all cursor-pointer"
+                    >
+                      Reset Progres (0)
+                    </button>
+                    <button
+                      onClick={() => {
+                        playSound('success');
+                        triggerBanner("💾 Angka parameter progression berhasil disimpan lokal dan cloud!");
+                      }}
+                      className="bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-[10px] py-2 px-4 rounded-xl transition-all cursor-pointer"
+                    >
+                      Simpan Parameter
+                    </button>
+                  </div>
+                </div>
+
                 <div className="border-t border-orange-100/50 pt-4 mt-6">
                   <h4 className="text-xs font-extrabold text-slate-800">Tips Saraf ADHD Lu:</h4>
-                  <p className="text-[10px] text-slate-400 leading-normal mt-1.5">
+                  <p className="text-[10px] text-slate-400 leading-normal mt-1.5 text-left">
                     Gak usah pusing bikin akun rumit. Cukup login sekali, dan semua diagram, data rekap, serta shop reward lu tersimpan abadi kapan saja kamu buka di PC/HP kesayangan lu!
                   </p>
                 </div>
