@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "main": "electron.cjs",
   "scripts": {
     "dev": "tsx server.ts",
     "build": "vite build",
@@ -12,6 +13,22 @@
     "lint": "tsc --noEmit",
     "build:pc": "npm run build && npx electron-builder",
     "build:mobile-sync": "npm run build && npx cap sync"
+  },
+  "build": {
+    "appId": "com.fokusadhd.app",
+    "productName": "FokusADHD",
+    "directories": {
+      "output": "dist-desktop"
+    },
+    "files": [
+      "dist/**/*",
+      "electron.cjs",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "asar": true
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
