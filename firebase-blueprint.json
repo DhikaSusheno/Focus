@@ -1,0 +1,202 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "ADHD user profile status, coins, level, chronotype, subtype, streak, and focus statistics.",
+      "type": "object",
+      "properties": {
+        "uName": {
+          "type": "string",
+          "description": "Display name of the user"
+        },
+        "level": {
+          "type": "integer",
+          "description": "Current gamification level"
+        },
+        "xp": {
+          "type": "integer",
+          "description": "Experience points accumulated towards the next level"
+        },
+        "coins": {
+          "type": "integer",
+          "description": "Reward coins"
+        },
+        "streak": {
+          "type": "integer",
+          "description": "Consecutive days active"
+        },
+        "notepadContent": {
+          "type": "string",
+          "description": "ADHD safe-space scratchpad or notepad contents"
+        },
+        "ideasCount": {
+          "type": "integer",
+          "description": "Total micro-ideas or brain dumps converted"
+        },
+        "totalFocusMinutes": {
+          "type": "integer",
+          "description": "Total focused timer minutes completed"
+        },
+        "activeMindmap": {
+          "type": "object",
+          "description": "Current active learning path / skill mindmap"
+        },
+        "journalSummary": {
+          "type": "object",
+          "description": "Current or last processed journal analysis"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Automated server timestamp for update confirmation"
+        }
+      },
+      "required": [
+        "uName",
+        "level",
+        "xp",
+        "coins",
+        "streak",
+        "updatedAt"
+      ]
+    },
+    "Task": {
+      "title": "Task",
+      "description": "Gamified ADHD task or micro-quest.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "urgency": {
+          "type": "string",
+          "enum": [
+            "Low",
+            "Medium",
+            "High"
+          ]
+        },
+        "xpReward": {
+          "type": "integer"
+        },
+        "coinReward": {
+          "type": "integer"
+        },
+        "isCompleted": {
+          "type": "boolean"
+        },
+        "notes": {
+          "type": "string"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "urgency",
+        "xpReward",
+        "coinReward",
+        "isCompleted",
+        "updatedAt"
+      ]
+    },
+    "Target": {
+      "title": "Target",
+      "description": "Short or long-term ADHD therapeutic micro-targets.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string",
+          "enum": [
+            "ShortTerm",
+            "LongTerm"
+          ]
+        },
+        "isCompleted": {
+          "type": "boolean"
+        },
+        "whyText": {
+          "type": "string"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "category",
+        "isCompleted",
+        "updatedAt"
+      ]
+    },
+    "Reward": {
+      "title": "Reward",
+      "description": "Custom user rewards purchased with reward coins.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "cost": {
+          "type": "integer"
+        },
+        "icon": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "unlocked": {
+          "type": "boolean"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "cost",
+        "icon",
+        "unlocked",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile database"
+    },
+    "/users/{userId}/tasks/{taskId}": {
+      "schema": "Task",
+      "description": "Personalized list of user tasks with custom micro-rewards"
+    },
+    "/users/{userId}/targets/{targetId}": {
+      "schema": "Target",
+      "description": "Short-term/long-term motivational learning targets"
+    },
+    "/users/{userId}/rewards/{rewardId}": {
+      "schema": "Reward",
+      "description": "Available shop of unlocked/purchaseable reward triggers"
+    }
+  }
+}

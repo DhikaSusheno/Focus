@@ -1,0 +1,6 @@
+{
+  "appId": "com.fokusadhd.app",
+  "appName": "FokusADHD",
+  "webDir": "dist",
+  "bundledWebRuntime": false
+}

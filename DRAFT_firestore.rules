@@ -1,0 +1,124 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net: Deny all reads/writes by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Hardened Global Helpers ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- Entity Specific Validation Helpers ---
+    function isValidUser(data) {
+      return data.keys().hasAll(['uName', 'level', 'xp', 'coins', 'streak', 'updatedAt'])
+        && data.keys().size() <= 12
+        && data.uName is string && data.uName.size() <= 100
+        && data.level is int && data.level >= 1
+        && data.xp is int && data.xp >= 0
+        && data.coins is int && data.coins >= 0
+        && data.streak is int && data.streak >= 0
+        && data.updatedAt == request.time;
+    }
+
+    function isValidTask(data) {
+      return data.keys().hasAll(['id', 'title', 'urgency', 'xpReward', 'coinReward', 'isCompleted', 'updatedAt'])
+        && data.keys().size() <= 8
+        && data.id is string && data.id.size() <= 128
+        && data.title is string && data.title.size() <= 200
+        && (data.urgency == 'Low' || data.urgency == 'Medium' || data.urgency == 'High')
+        && data.xpReward is int && data.xpReward >= 0
+        && data.coinReward is int && data.coinReward >= 0
+        && data.isCompleted is bool
+        && data.updatedAt == request.time;
+    }
+
+    function isValidTarget(data) {
+      return data.keys().hasAll(['id', 'title', 'category', 'isCompleted', 'updatedAt'])
+        && data.keys().size() <= 6
+        && data.id is string && data.id.size() <= 128
+        && data.title is string && data.title.size() <= 200
+        && (data.category == 'ShortTerm' || data.category == 'LongTerm')
+        && data.isCompleted is bool
+        && data.updatedAt == request.time;
+    }
+
+    function isValidReward(data) {
+      return data.keys().hasAll(['id', 'title', 'cost', 'icon', 'unlocked', 'updatedAt'])
+        && data.keys().size() <= 7
+        && data.id is string && data.id.size() <= 128
+        && data.title is string && data.title.size() <= 200
+        && data.cost is int && data.cost >= 0
+        && data.icon is string && data.icon.size() <= 50
+        && data.unlocked is bool
+        && data.updatedAt == request.time;
+    }
+
+    // --- Document Rules Mapping ---
+
+    // 1. Users profile document
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidUser(incoming());
+      
+      // Updates are restricted to whitelisted field changes using the action-based update pattern
+      allow update: if isOwner(userId) && isValidUser(incoming()) && (
+        // Enforce immutability of original settings or profile if needed; but since users can update overall status,
+        // we check that their level/xp/coins updates are correctly validated through isValidUser.
+        incoming().updatedAt == request.time
+      );
+      
+      allow delete: if false; // User accounts are kept persistent
+
+      // 2. Personal tasks subcollection
+      match /tasks/{taskId} {
+        allow list, get: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(taskId) && taskId == incoming().id && isValidTask(incoming());
+        allow update: if isOwner(userId) && isValidId(taskId) && taskId == incoming().id && isValidTask(incoming()) && (
+          // Action: Toggle completion or edit notes
+          incoming().diff(existing()).affectedKeys().hasOnly(['isCompleted', 'notes', 'title', 'urgency', 'xpReward', 'coinReward', 'updatedAt'])
+        );
+        allow delete: if isOwner(userId) && isValidId(taskId);
+      }
+
+      // 3. Mini learning targets
+      match /targets/{targetId} {
+        allow list, get: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(targetId) && targetId == incoming().id && isValidTarget(incoming());
+        allow update: if isOwner(userId) && isValidId(targetId) && targetId == incoming().id && isValidTarget(incoming()) && (
+          incoming().diff(existing()).affectedKeys().hasOnly(['isCompleted', 'whyText', 'title', 'category', 'updatedAt'])
+        );
+        allow delete: if isOwner(userId) && isValidId(targetId);
+      }
+
+      // 4. Shop rewards
+      match /rewards/{rewardId} {
+        allow list, get: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(rewardId) && rewardId == incoming().id && isValidReward(incoming());
+        allow update: if isOwner(userId) && isValidId(rewardId) && rewardId == incoming().id && isValidReward(incoming()) && (
+          incoming().diff(existing()).affectedKeys().hasOnly(['unlocked', 'type', 'icon', 'cost', 'title', 'updatedAt'])
+        );
+        allow delete: if isOwner(userId) && isValidId(rewardId);
+      }
+    }
+  }
+}

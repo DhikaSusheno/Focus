@@ -1,0 +1,6 @@
+{
+  "name": "ADHD Control and Tech Mindmapping App",
+  "description": "A daily control app for ADHD designed with task reminders, focus tracker, a daily reward system, custom AI skill mindmapping, and global tech news with personalized learning plans.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
